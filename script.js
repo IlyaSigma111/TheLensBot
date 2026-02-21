@@ -12,6 +12,7 @@ let logs = JSON.parse(localStorage.getItem('logs') || '[]');
 let templates = JSON.parse(localStorage.getItem('templates') || '[]');
 let scheduledPosts = JSON.parse(localStorage.getItem('scheduledPosts') || '[]');
 let postsStats = JSON.parse(localStorage.getItem('postsStats') || '[]');
+let channelInfo = null;
 let sessionStart = new Date();
 let statsInterval;
 let chartInstance = null;
@@ -32,8 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSessionTime();
     setInterval(updateSessionTime, 1000);
     
-    // Обновляем статистику каждые 10 секунд
-    statsInterval = setInterval(updateChannelStats, 10000);
+    // Обновляем статистику каждые 30 секунд
+    statsInterval = setInterval(updateChannelStats, 30000);
     
     // Добавляем лог
     addLog('Система инициализирована', 'info');
@@ -89,6 +90,7 @@ async function checkChannelAccess(channelId) {
         const data = await response.json();
         
         if (data.ok) {
+            channelInfo = data.result;
             document.getElementById('subscribersCount').textContent = data.result.members_count || '...';
             addLog(`Доступ к каналу "${data.result.title}" получен`, 'success');
         }
@@ -117,11 +119,18 @@ async function publishNow() {
     
     const channels = getChannelsByMode(mode);
     let successCount = 0;
+    let messageIds = [];
     
     for (const channel of channels) {
         try {
-            const success = await sendToChannel(channel, text, imageUrl);
-            if (success) successCount++;
+            const result = await sendToChannel(channel, text, imageUrl);
+            if (result.success) {
+                successCount++;
+                messageIds.push({
+                    channel: channel,
+                    messageId: result.messageId
+                });
+            }
         } catch (error) {
             console.error(`Ошибка отправки в ${channel}:`, error);
         }
@@ -138,7 +147,9 @@ async function publishNow() {
             id: Date.now(),
             text: text,
             date: new Date().toISOString(),
-            views: Math.floor(Math.random() * 500) + 100 // Для демо
+            channel: channels[0],
+            messageIds: messageIds,
+            views: 0 // Будут обновлены позже
         };
         
         postsStats.push(postStat);
@@ -159,31 +170,44 @@ async function publishNow() {
 }
 
 async function sendToChannel(channelId, text, imageUrl) {
-    if (imageUrl) {
-        // Отправка с фото
-        const response = await fetch(`${API_URL}/sendPhoto`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: channelId,
-                photo: imageUrl,
-                caption: text,
-                parse_mode: 'HTML'
-            })
-        });
-        return (await response.json()).ok;
-    } else {
-        // Отправка текста
-        const response = await fetch(`${API_URL}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: channelId,
-                text: text,
-                parse_mode: 'HTML'
-            })
-        });
-        return (await response.json()).ok;
+    try {
+        if (imageUrl) {
+            // Отправка с фото
+            const response = await fetch(`${API_URL}/sendPhoto`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: channelId,
+                    photo: imageUrl,
+                    caption: text,
+                    parse_mode: 'HTML'
+                })
+            });
+            const data = await response.json();
+            return {
+                success: data.ok,
+                messageId: data.ok ? data.result.message_id : null
+            };
+        } else {
+            // Отправка текста
+            const response = await fetch(`${API_URL}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: channelId,
+                    text: text,
+                    parse_mode: 'HTML'
+                })
+            });
+            const data = await response.json();
+            return {
+                success: data.ok,
+                messageId: data.ok ? data.result.message_id : null
+            };
+        }
+    } catch (error) {
+        console.error('Ошибка отправки:', error);
+        return { success: false };
     }
 }
 
@@ -377,7 +401,32 @@ function emergencyStop() {
     }
 }
 
-// ===== СТАТИСТИКА КАНАЛА =====
+// ===== РЕАЛЬНАЯ СТАТИСТИКА ИЗ TELEGRAM =====
+async function refreshAllStats() {
+    showStatus('Сбор реальной статистики из Telegram...', 'info', 'postStatus');
+    
+    try {
+        // Получаем информацию о канале
+        await updateChannelStats();
+        
+        // Получаем реальные просмотры для постов
+        await updatePostViews();
+        
+        // Обновляем статистику
+        updateAverageReach();
+        updateEngagementRate();
+        updatePostsPerWeek();
+        updateGrowthRate();
+        updateTopPosts();
+        
+        addLog('Реальная статистика обновлена', 'success');
+        showStatus('Статистика обновлена из Telegram', 'success', 'postStatus');
+    } catch (error) {
+        console.error('Ошибка получения статистики:', error);
+        showStatus('Ошибка получения статистики', 'error', 'postStatus');
+    }
+}
+
 async function updateChannelStats() {
     if (!botOnline) return;
     
@@ -391,51 +440,75 @@ async function updateChannelStats() {
         const data = await response.json();
         
         if (data.ok) {
-            document.getElementById('subscribersCount').textContent = data.result.members_count || '...';
+            channelInfo = data.result;
+            const members = data.result.members_count || 0;
+            document.getElementById('subscribersCount').textContent = members;
+            
+            // Сохраняем историю подписчиков для расчёта роста
+            const history = JSON.parse(localStorage.getItem('subscriberHistory') || '[]');
+            history.push({
+                date: new Date().toISOString(),
+                count: members
+            });
+            // Храним только последние 30 дней
+            if (history.length > 30) history.shift();
+            localStorage.setItem('subscriberHistory', JSON.stringify(history));
         }
     } catch (error) {
-        console.log('Ошибка обновления статистики');
+        console.log('Ошибка обновления статистики канала');
     }
 }
 
-// ===== РАСШИРЕННАЯ СТАТИСТИКА =====
-async function refreshAllStats() {
-    showStatus('Обновление статистики...', 'info', 'postStatus');
+async function updatePostViews() {
+    // Обновляем просмотры для всех сохранённых постов
+    for (let i = 0; i < postsStats.length; i++) {
+        const post = postsStats[i];
+        if (post.messageIds && post.messageIds.length > 0) {
+            try {
+                // Берём первый канал для получения статистики
+                const messageId = post.messageIds[0].messageId;
+                const response = await fetch(`${API_URL}/getMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: post.messageIds[0].channel,
+                        message_id: messageId
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.ok && data.result.views) {
+                    post.views = data.result.views;
+                }
+            } catch (error) {
+                console.log('Не удалось получить просмотры для поста', post.id);
+            }
+        }
+    }
     
-    updateAverageReach();
-    updateEngagementRate();
-    updatePostsPerWeek();
-    updateGrowthRate();
-    updateTopPosts();
-    updateAudienceStats();
-    updateBestTimeGrid();
-    updateActivityChart();
-    
-    addLog('Статистика обновлена', 'info');
-    showStatus('Статистика обновлена', 'success', 'postStatus');
+    // Сохраняем обновлённые данные
+    localStorage.setItem('postsStats', JSON.stringify(postsStats));
 }
 
 function updateAverageReach() {
-    const posts = postsStats.slice(-10);
+    const posts = postsStats.slice(-10); // последние 10 постов
     if (posts.length === 0) {
         document.getElementById('avgReach').textContent = '0';
         return;
     }
     
-    const avg = posts.reduce((sum, post) => sum + (post.views || 0), 0) / posts.length;
+    const totalViews = posts.reduce((sum, post) => sum + (post.views || 0), 0);
+    const avg = totalViews / posts.length;
     document.getElementById('avgReach').textContent = Math.round(avg);
 }
 
 function updateEngagementRate() {
-    const subscribers = parseInt(document.getElementById('subscribersCount').textContent) || 1000;
+    const subscribers = parseInt(document.getElementById('subscribersCount').textContent) || 1;
     const avgReach = parseInt(document.getElementById('avgReach').textContent) || 0;
     
-    if (subscribers > 0 && avgReach > 0) {
-        const er = ((avgReach / subscribers) * 100).toFixed(1);
-        document.getElementById('erRate').textContent = er + '%';
-    } else {
-        document.getElementById('erRate').textContent = '0%';
-    }
+    // ER = (средний охват / подписчики) * 100%
+    const er = ((avgReach / subscribers) * 100).toFixed(1);
+    document.getElementById('erRate').textContent = er + '%';
 }
 
 function updatePostsPerWeek() {
@@ -447,8 +520,26 @@ function updatePostsPerWeek() {
 }
 
 function updateGrowthRate() {
-    const growth = (Math.random() * 15 + 2).toFixed(1);
-    document.getElementById('growthRate').textContent = `+${growth}%`;
+    // Считаем рост подписчиков за последние 7 дней
+    const history = JSON.parse(localStorage.getItem('subscriberHistory') || '[]');
+    
+    if (history.length < 2) {
+        document.getElementById('growthRate').textContent = '+0%';
+        return;
+    }
+    
+    const oldest = history[0].count;
+    const newest = history[history.length - 1].count;
+    
+    if (oldest === 0) {
+        document.getElementById('growthRate').textContent = '+0%';
+        return;
+    }
+    
+    const growth = ((newest - oldest) / oldest * 100).toFixed(1);
+    const sign = growth >= 0 ? '+' : '';
+    document.getElementById('growthRate').textContent = `${sign}${growth}%`;
+    document.getElementById('weeklyGrowth').textContent = `${sign}${Math.round(newest - oldest)}`;
 }
 
 function updateTopPosts() {
@@ -463,11 +554,13 @@ function updateTopPosts() {
     let html = '';
     sortedPosts.forEach((post, index) => {
         const preview = post.text.substring(0, 50) + (post.text.length > 50 ? '...' : '');
+        const date = new Date(post.date).toLocaleDateString();
         html += `
             <div class="post-stat-item">
                 <div class="post-rank">${index + 1}</div>
                 <div class="post-preview">${preview}</div>
                 <div class="post-views">${post.views || 0} 👁️</div>
+                <div style="font-size:0.8rem; color:var(--gray-500);">${date}</div>
             </div>
         `;
     });
@@ -476,19 +569,49 @@ function updateTopPosts() {
 }
 
 function updateAudienceStats() {
-    document.getElementById('activeToday').textContent = Math.floor(Math.random() * 200) + 50;
-    document.getElementById('activeWeek').textContent = Math.floor(Math.random() * 500) + 200;
-    
-    const male = Math.floor(Math.random() * 40 + 30);
-    const female = 100 - male;
-    document.getElementById('genderRatio').textContent = `${male}/${female}`;
+    // Эти данные можно получить только если бот является администратором
+    // и имеет права на чтение статистики
+    document.getElementById('activeToday').textContent = '—';
+    document.getElementById('activeWeek').textContent = '—';
+    document.getElementById('genderRatio').textContent = '—/—';
 }
 
 function updateBestTimeGrid() {
+    // Анализируем время публикации лучших постов
     const grid = document.getElementById('bestTimeGrid');
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     const hours = ['0-3', '4-7', '8-11', '12-15', '16-19', '20-23'];
     
+    // Создаём матрицу активности
+    const activityMatrix = {};
+    days.forEach(day => {
+        activityMatrix[day] = {};
+        hours.forEach(hour => {
+            activityMatrix[day][hour] = 0;
+        });
+    });
+    
+    // Анализируем посты
+    postsStats.forEach(post => {
+        const postDate = new Date(post.date);
+        const day = days[postDate.getDay() === 0 ? 6 : postDate.getDay() - 1];
+        const hourGroup = Math.floor(postDate.getHours() / 4);
+        const hourRange = hours[hourGroup];
+        
+        if (activityMatrix[day] && activityMatrix[day][hourRange] !== undefined) {
+            activityMatrix[day][hourRange] += post.views || 0;
+        }
+    });
+    
+    // Нормализуем значения
+    let maxViews = 0;
+    days.forEach(day => {
+        hours.forEach(hour => {
+            maxViews = Math.max(maxViews, activityMatrix[day][hour]);
+        });
+    });
+    
+    // Строим тепловую карту
     let html = '<div></div>';
     hours.forEach(hour => {
         html += `<div style="font-size:0.8rem; color:var(--gray-600); text-align:center;">${hour}</div>`;
@@ -496,10 +619,14 @@ function updateBestTimeGrid() {
     
     days.forEach(day => {
         html += `<div style="font-weight:600; color:var(--gray-700);">${day}</div>`;
-        for (let i = 0; i < 6; i++) {
-            const intensity = Math.floor(Math.random() * 5) + 1;
-            html += `<div class="time-cell" data-intensity="${intensity}" title="Активность: ${intensity}/5">${intensity}</div>`;
-        }
+        hours.forEach(hour => {
+            const views = activityMatrix[day][hour] || 0;
+            let intensity = 1;
+            if (maxViews > 0) {
+                intensity = Math.ceil((views / maxViews) * 5);
+            }
+            html += `<div class="time-cell" data-intensity="${intensity}" title="Просмотров: ${views}">${intensity}</div>`;
+        });
     });
     
     grid.innerHTML = html;
@@ -509,15 +636,24 @@ function updateActivityChart() {
     const ctx = document.getElementById('activityChart')?.getContext('2d');
     if (!ctx) return;
     
-    const labels = [];
-    const data = [];
-    
+    // Группируем просмотры по дням
+    const viewsByDay = {};
     for (let i = 6; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
-        labels.push(date.toLocaleDateString('ru-RU', { weekday: 'short' }));
-        data.push(Math.floor(Math.random() * 200) + 50);
+        const dateStr = date.toLocaleDateString();
+        viewsByDay[dateStr] = 0;
     }
+    
+    postsStats.forEach(post => {
+        const postDate = new Date(post.date).toLocaleDateString();
+        if (viewsByDay[postDate] !== undefined) {
+            viewsByDay[postDate] += post.views || 0;
+        }
+    });
+    
+    const labels = Object.keys(viewsByDay);
+    const data = Object.values(viewsByDay);
     
     if (chartInstance) {
         chartInstance.destroy();
@@ -526,7 +662,10 @@ function updateActivityChart() {
     chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
+            labels: labels.map(date => {
+                const d = new Date(date);
+                return d.toLocaleDateString('ru-RU', { weekday: 'short' });
+            }),
             datasets: [{
                 label: 'Просмотры',
                 data: data,
@@ -695,17 +834,15 @@ function logout() {
 function checkScheduledPosts() {
     const now = new Date();
     
-    scheduledPosts.forEach(post => {
+    scheduledPosts.forEach(async (post) => {
         const postTime = new Date(post.scheduledTime);
         
         if (postTime <= now) {
-            sendToChannel(MAIN_CHANNEL, post.text, post.imageUrl)
-                .then(success => {
-                    if (success) {
-                        deleteScheduled(post.id);
-                        addLog('Автоматическая публикация запланированного поста', 'success');
-                    }
-                });
+            const result = await sendToChannel(MAIN_CHANNEL, post.text, post.imageUrl);
+            if (result.success) {
+                deleteScheduled(post.id);
+                addLog('Автоматическая публикация запланированного поста', 'success');
+            }
         }
     });
 }
