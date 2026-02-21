@@ -63,9 +63,14 @@
         <div class="stats-detailed">
             <div class="stats-header">
                 <h2><i class="fas fa-chart-line"></i> Детальная статистика канала</h2>
-                <button class="btn-refresh" onclick="refreshAllStats()">
-                    <i class="fas fa-sync-alt"></i> Обновить
-                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-refresh" onclick="showAllPosts()">
+                        <i class="fas fa-list"></i> Все посты
+                    </button>
+                    <button class="btn-refresh" onclick="refreshAllStats()">
+                        <i class="fas fa-sync-alt"></i> Обновить
+                    </button>
+                </div>
             </div>
             
             <div class="stats-tabs">
@@ -114,13 +119,16 @@
                 </div>
             </div>
             
-            <!-- Вкладка Посты -->
+            <!-- Вкладка Посты (Топ-5) -->
             <div id="postsStats" class="stats-tab-content">
                 <div class="top-posts">
                     <h3>🔥 Топ-5 постов по просмотрам</h3>
                     <div id="topPostsList" class="posts-list">
                         <div class="loading">Загрузка...</div>
                     </div>
+                    <button class="btn btn-secondary" onclick="showAllPosts()" style="width: 100%; margin-top: 16px;">
+                        <i class="fas fa-list"></i> Показать все посты
+                    </button>
                 </div>
             </div>
             
@@ -137,7 +145,7 @@
                     </div>
                     <div class="audience-item">
                         <span>Мужчины/Женщины</span>
-                        <strong id="genderRatio">50/50</strong>
+                        <strong id="genderRatio"><span style="color: var(--gray-400);">—</span></strong>
                     </div>
                 </div>
             </div>
@@ -383,7 +391,64 @@
             </button>
         </div>
     </div>
-    
+
+    <!-- Модальное окно со всеми постами -->
+    <div id="allPostsModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-history"></i> Все опубликованные посты</h3>
+                <button class="modal-close" onclick="closeAllPostsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="posts-filter" style="margin-bottom: 20px;">
+                    <input type="text" id="postSearchInput" class="form-control" 
+                           placeholder="🔍 Поиск по постам..." onkeyup="filterPosts()">
+                </div>
+                <div class="posts-sort" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+                    <span style="color: var(--gray-600);">Сортировать:</span>
+                    <select id="sortPostsSelect" class="form-control" style="width: auto;" onchange="sortPosts()">
+                        <option value="date_desc">Сначала новые</option>
+                        <option value="date_asc">Сначала старые</option>
+                        <option value="views_desc">По просмотрам (убыв.)</option>
+                        <option value="views_asc">По просмотрам (возр.)</option>
+                    </select>
+                </div>
+                <div id="allPostsList" class="all-posts-list" style="max-height: 500px; overflow-y: auto;">
+                    <!-- Список всех постов будет загружен сюда -->
+                    <div class="loading">Загрузка постов...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div style="flex: 1; color: var(--gray-600);">
+                    Всего постов: <span id="totalPostsCount">0</span>
+                </div>
+                <button class="btn btn-secondary" onclick="closeAllPostsModal()">Закрыть</button>
+                <button class="btn btn-primary" onclick="exportAllPosts()">
+                    <i class="fas fa-download"></i> Экспорт в JSON
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно просмотра поста -->
+    <div id="viewPostModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-alt"></i> Просмотр поста</h3>
+                <button class="modal-close" onclick="closeViewPostModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="viewPostContent">
+                <!-- Содержимое поста будет загружено сюда -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeViewPostModal()">Закрыть</button>
+                <button class="btn btn-danger" onclick="deleteCurrentPost()">
+                    <i class="fas fa-trash"></i> Удалить
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
