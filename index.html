@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeoCascade | Объективно</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header с брендингом канала -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fab fa-telegram"></i>
+                </div>
+                <div>
+                    <h1 class="logo-text">NeoCascade</h1>
+                    <p class="logo-subtext">Управление каналом <strong>«Объективно»</strong></p>
+                </div>
+            </div>
+            <div id="botStatus" class="status-badge offline">
+                <div class="status-dot offline"></div>
+                <span>Проверка подключения...</span>
+            </div>
+        </header>
+        
+        <!-- Статистика канала -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-value" id="subscribersCount">...</div>
+                <div class="stat-label">Подписчиков</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="stat-value" id="postsCount">0</div>
+                <div class="stat-label">Постов отправлено</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-value" id="uptime">00:00:00</div>
+                <div class="stat-label">Время работы</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-value" id="weeklyGrowth">+0</div>
+                <div class="stat-label">За неделю</div>
+            </div>
+        </div>
+        
+        <!-- Основная сетка -->
+        <div class="grid">
+            <!-- Карточка создания поста -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-newspaper"></i>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Создать пост</h2>
+                        <p class="card-subtitle">Опубликовать в канал «Объективно»</p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-font"></i>
+                        Текст поста
+                    </label>
+                    <textarea id="postText" class="form-control" 
+                              placeholder="Введите текст поста... (можно использовать HTML теги: &lt;b&gt;, &lt;i&gt;, &lt;a&gt;)"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-image"></i>
+                        URL изображения (необязательно)
+                    </label>
+                    <input type="text" id="imageUrl" class="form-control" 
+                           placeholder="https://example.com/image.jpg">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-calendar"></i>
+                        Отложенная публикация
+                    </label>
+                    <input type="datetime-local" id="scheduledTime" class="form-control">
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="publishNow()">
+                        <i class="fas fa-paper-plane"></i> Опубликовать сейчас
+                    </button>
+                    <button class="btn btn-secondary" onclick="schedulePost()">
+                        <i class="fas fa-clock"></i> Запланировать
+                    </button>
+                </div>
+                
+                <div id="postStatus" class="status-message"></div>
+            </div>
+            
+            <!-- Карточка быстрых постов -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Быстрые посты</h2>
+                        <p class="card-subtitle">Шаблоны для канала</p>
+                    </div>
+                </div>
+                
+                <div class="quick-posts">
+                    <div class="quick-post" onclick="useTemplate('news')">
+                        <i class="fas fa-newspaper"></i>
+                        <span>Новость</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('announcement')">
+                        <i class="fas fa-megaphone"></i>
+                        <span>Анонс</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('poll')">
+                        <i class="fas fa-poll"></i>
+                        <span>Опрос</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('quote')">
+                        <i class="fas fa-quote-right"></i>
+                        <span>Цитата</span>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label class="form-label">Сохранённые шаблоны</label>
+                    <select id="savedTemplates" class="form-control">
+                        <option value="">Выберите шаблон...</option>
+                    </select>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="saveAsTemplate()">
+                        <i class="fas fa-save"></i> Сохранить как шаблон
+                    </button>
+                    <button class="btn btn-info" onclick="loadTemplate()">
+                        <i class="fas fa-download"></i> Загрузить
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Карточка управления -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Управление</h2>
+                        <p class="card-subtitle">Настройки канала и бота</p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Канал</label>
+                    <div class="info-row">
+                        <span class="info-label">Тестовый канал:</span>
+                        <span class="info-value" id="testChannelId">-1003757225931</span>
+                        <button class="btn-icon" onclick="copyToClipboard('-1003757225931')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Основной канал:</span>
+                        <span class="info-value" id="mainChannelId">Не указан</span>
+                        <button class="btn-icon" onclick="setMainChannel()">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Информация о боте</label>
+                    <div class="info-row">
+                        <span class="info-label">ID бота:</span>
+                        <span class="info-value">8314217886</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Токен:</span>
+                        <span class="info-value token-masked">8314217886:AAEk...vU</span>
+                        <button class="btn-icon" onclick="toggleToken()">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Режим публикации</label>
+                    <select id="publishMode" class="form-control">
+                        <option value="test">Тестовый канал (-1003757225931)</option>
+                        <option value="main">Основной канал</option>
+                        <option value="both">Оба канала</option>
+                    </select>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="testConnection()">
+                        <i class="fas fa-plug"></i> Тест подключения
+                    </button>
+                    <button class="btn btn-danger" onclick="emergencyStop()">
+                        <i class="fas fa-stop"></i> Экстренная остановка
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Карточка статистики -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Статистика</h2>
+                        <p class="card-subtitle">Активность за последние 7 дней</p>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+                
+                <div class="stats-list">
+                    <div class="stat-item">
+                        <span>Просмотры сегодня:</span>
+                        <strong id="viewsToday">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Новые подписчики:</span>
+                        <strong id="newSubscribers">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Вовлечённость:</span>
+                        <strong id="engagement">0%</strong>
+                    </div>
+                </div>
+                
+                <button class="btn btn-secondary" onclick="refreshStats()" style="width: 100%;">
+                    <i class="fas fa-sync-alt"></i> Обновить статистику
+                </button>
+            </div>
+            
+            <!-- Карточка запланированных постов -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Запланировано</h2>
+                        <p class="card-subtitle">Ожидают публикации</p>
+                    </div>
+                </div>
+                
+                <div class="scheduled-list" id="scheduledList">
+                    <div class="scheduled-empty">
+                        <i class="fas fa-calendar-plus"></i>
+                        <p>Нет запланированных постов</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Карточка логов -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Логи действий</h2>
+                        <p class="card-subtitle">История операций</p>
+                    </div>
+                </div>
+                
+                <div class="logs-container" id="logsContainer">
+                    <div class="log-entry">
+                        <span class="log-time">[12:00:00]</span>
+                        <span class="log-message">Система инициализирована</span>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="clearLogs()">
+                        <i class="fas fa-trash"></i> Очистить
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportLogs()">
+                        <i class="fas fa-download"></i> Экспорт
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="session-info">
+            <div class="session-item">
+                <i class="fas fa-telegram"></i>
+                <span>Канал: <strong>@objektivno</strong></span>
+            </div>
+            <div class="session-item">
+                <i class="fas fa-clock"></i>
+                <span>Сессия: <span id="sessionTime">00:00:00</span></span>
+            </div>
+            <div class="session-item">
+                <i class="fas fa-database"></i>
+                <span>Постов: <span id="totalPosts">0</span></span>
+            </div>
+            <button class="btn-logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Выход
+            </button>
+        </div>
+    </div>
+    
+    <!-- Модальное окно для основного канала -->
+    <div id="mainChannelModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Указать основной канал</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">ID канала или @username</label>
+                    <input type="text" id="mainChannelInput" class="form-control" 
+                           placeholder="Например: @channel или -1001234567890">
+                </div>
+                <div class="info-text">
+                    <i class="fas fa-info-circle"></i>
+                    Бот должен быть администратором канала
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveMainChannel()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
