@@ -6,6 +6,7 @@
     <title>NeoCascade | Объективно</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -55,6 +56,97 @@
                 </div>
                 <div class="stat-value" id="weeklyGrowth">+0</div>
                 <div class="stat-label">За неделю</div>
+            </div>
+        </div>
+
+        <!-- Детальная статистика -->
+        <div class="stats-detailed">
+            <div class="stats-header">
+                <h2><i class="fas fa-chart-line"></i> Детальная статистика канала</h2>
+                <button class="btn-refresh" onclick="refreshAllStats()">
+                    <i class="fas fa-sync-alt"></i> Обновить
+                </button>
+            </div>
+            
+            <div class="stats-tabs">
+                <button class="tab-btn active" onclick="switchStatsTab('overview', event)">Обзор</button>
+                <button class="tab-btn" onclick="switchStatsTab('posts', event)">Посты</button>
+                <button class="tab-btn" onclick="switchStatsTab('audience', event)">Аудитория</button>
+                <button class="tab-btn" onclick="switchStatsTab('besttime', event)">Лучшее время</button>
+            </div>
+            
+            <!-- Вкладка Обзор -->
+            <div id="overviewStats" class="stats-tab-content active">
+                <div class="stats-cards">
+                    <div class="mini-card">
+                        <div class="mini-icon"><i class="fas fa-eye"></i></div>
+                        <div>
+                            <div class="mini-label">Средний охват</div>
+                            <div class="mini-value" id="avgReach">0</div>
+                        </div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="mini-icon"><i class="fas fa-percent"></i></div>
+                        <div>
+                            <div class="mini-label">ER (вовлечённость)</div>
+                            <div class="mini-value" id="erRate">0%</div>
+                        </div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="mini-icon"><i class="fas fa-calendar-week"></i></div>
+                        <div>
+                            <div class="mini-label">Постов за неделю</div>
+                            <div class="mini-value" id="postsWeek">0</div>
+                        </div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="mini-icon"><i class="fas fa-chart-bar"></i></div>
+                        <div>
+                            <div class="mini-label">Рост подписчиков</div>
+                            <div class="mini-value" id="growthRate">+0%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- График активности -->
+                <div class="chart-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Вкладка Посты -->
+            <div id="postsStats" class="stats-tab-content">
+                <div class="top-posts">
+                    <h3>🔥 Топ-5 постов по просмотрам</h3>
+                    <div id="topPostsList" class="posts-list">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Вкладка Аудитория -->
+            <div id="audienceStats" class="stats-tab-content">
+                <div class="audience-stats">
+                    <div class="audience-item">
+                        <span>Активные сегодня</span>
+                        <strong id="activeToday">0</strong>
+                    </div>
+                    <div class="audience-item">
+                        <span>Активные за неделю</span>
+                        <strong id="activeWeek">0</strong>
+                    </div>
+                    <div class="audience-item">
+                        <span>Мужчины/Женщины</span>
+                        <strong id="genderRatio">50/50</strong>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Вкладка Лучшее время -->
+            <div id="bestTimeStats" class="stats-tab-content">
+                <div class="best-time-grid" id="bestTimeGrid">
+                    <!-- Тепловая карта времени -->
+                </div>
             </div>
         </div>
         
@@ -171,7 +263,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Канал</label>
+                    <label class="form-label">Каналы</label>
                     <div class="info-row">
                         <span class="info-label">Тестовый канал:</span>
                         <span class="info-value" id="testChannelId">-1003757225931</span>
@@ -181,9 +273,9 @@
                     </div>
                     <div class="info-row">
                         <span class="info-label">Основной канал:</span>
-                        <span class="info-value" id="mainChannelId">Не указан</span>
-                        <button class="btn-icon" onclick="setMainChannel()">
-                            <i class="fas fa-edit"></i>
+                        <span class="info-value" id="mainChannelId">-1002611788892</span>
+                        <button class="btn-icon" onclick="copyToClipboard('-1002611788892')">
+                            <i class="fas fa-copy"></i>
                         </button>
                     </div>
                 </div>
@@ -196,7 +288,7 @@
                     </div>
                     <div class="info-row">
                         <span class="info-label">Токен:</span>
-                        <span class="info-value token-masked">8314217886:AAEk...vU</span>
+                        <span class="info-value token-masked">8314217886:AAEkoXvYkk0NC0UwHzf9jKRuHZFIN8nb2vU</span>
                         <button class="btn-icon" onclick="toggleToken()">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -207,7 +299,7 @@
                     <label class="form-label">Режим публикации</label>
                     <select id="publishMode" class="form-control">
                         <option value="test">Тестовый канал (-1003757225931)</option>
-                        <option value="main">Основной канал</option>
+                        <option value="main" selected>Основной канал (-1002611788892)</option>
                         <option value="both">Оба канала</option>
                     </select>
                 </div>
@@ -220,42 +312,6 @@
                         <i class="fas fa-stop"></i> Экстренная остановка
                     </button>
                 </div>
-            </div>
-            
-            <!-- Карточка статистики -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                    <div>
-                        <h2 class="card-title">Статистика</h2>
-                        <p class="card-subtitle">Активность за последние 7 дней</p>
-                    </div>
-                </div>
-                
-                <div class="chart-container">
-                    <canvas id="activityChart"></canvas>
-                </div>
-                
-                <div class="stats-list">
-                    <div class="stat-item">
-                        <span>Просмотры сегодня:</span>
-                        <strong id="viewsToday">0</strong>
-                    </div>
-                    <div class="stat-item">
-                        <span>Новые подписчики:</span>
-                        <strong id="newSubscribers">0</strong>
-                    </div>
-                    <div class="stat-item">
-                        <span>Вовлечённость:</span>
-                        <strong id="engagement">0%</strong>
-                    </div>
-                </div>
-                
-                <button class="btn btn-secondary" onclick="refreshStats()" style="width: 100%;">
-                    <i class="fas fa-sync-alt"></i> Обновить статистику
-                </button>
             </div>
             
             <!-- Карточка запланированных постов -->
@@ -325,31 +381,6 @@
             <button class="btn-logout" onclick="logout()">
                 <i class="fas fa-sign-out-alt"></i> Выход
             </button>
-        </div>
-    </div>
-    
-    <!-- Модальное окно для основного канала -->
-    <div id="mainChannelModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Указать основной канал</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">ID канала или @username</label>
-                    <input type="text" id="mainChannelInput" class="form-control" 
-                           placeholder="Например: @channel или -1001234567890">
-                </div>
-                <div class="info-text">
-                    <i class="fas fa-info-circle"></i>
-                    Бот должен быть администратором канала
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Отмена</button>
-                <button class="btn btn-primary" onclick="saveMainChannel()">Сохранить</button>
-            </div>
         </div>
     </div>
     
