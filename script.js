@@ -16,6 +16,7 @@ let channelInfo = null;
 let sessionStart = new Date();
 let statsInterval;
 let chartInstance = null;
+let currentViewingPostId = null;
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -99,20 +100,32 @@ async function checkChannelAccess(channelId) {
     }
 }
 
-// ===== ПУБЛИКАЦИЯ ПОСТОВ =====
+// ===== ПУБЛИКАЦИЯ ПОСТОВ С ХЭШТЕГАМИ =====
 async function publishNow() {
     if (!botOnline) {
         showStatus('Бот не в сети', 'error', 'postStatus');
         return;
     }
     
-    const text = document.getElementById('postText').value.trim();
+    let text = document.getElementById('postText').value.trim();
     const imageUrl = document.getElementById('imageUrl').value.trim();
     const mode = document.getElementById('publishMode').value;
     
     if (!text && !imageUrl) {
         showStatus('Введите текст поста или добавьте изображение', 'error', 'postStatus');
         return;
+    }
+    
+    // Добавляем хэштеги #Бот и #Константин к тексту
+    const botHashtags = '\n\n#Бот #Константин';
+    
+    // Проверяем, есть ли уже хэштеги в тексте
+    if (!text.includes('#Бот') && !text.includes('#Константин')) {
+        text = text + botHashtags;
+    } else if (!text.includes('#Бот')) {
+        text = text + ' #Бот';
+    } else if (!text.includes('#Константин')) {
+        text = text + ' #Константин';
     }
     
     showStatus('Публикация...', 'info', 'postStatus');
@@ -149,16 +162,17 @@ async function publishNow() {
             date: new Date().toISOString(),
             channel: channels[0],
             messageIds: messageIds,
-            views: 0 // Будут обновлены позже через getMessage
+            views: 0,
+            hashtags: ['#Бот', '#Константин']
         };
         
         postsStats.push(postStat);
         localStorage.setItem('postsStats', JSON.stringify(postsStats.slice(-50)));
         
-        showStatus(`Опубликовано в ${successCount} канал(ов)`, 'success', 'postStatus');
-        addLog(`Пост опубликован (${successCount} каналов)`, 'success');
+        showStatus(`Опубликовано в ${successCount} канал(ов) с хэштегами #Бот #Константин`, 'success', 'postStatus');
+        addLog(`Пост опубликован с хэштегами #Бот #Константин`, 'success');
         
-        // Обновляем статистику через 5 секунд (чтобы Telegram успел обработать)
+        // Обновляем статистику через 5 секунд
         setTimeout(() => {
             refreshAllStats();
         }, 5000);
@@ -242,20 +256,33 @@ function schedulePost() {
         return;
     }
     
+    // Добавляем хэштеги к запланированному посту
+    let postText = text;
+    const botHashtags = '\n\n#Бот #Константин';
+    
+    if (!postText.includes('#Бот') && !postText.includes('#Константин')) {
+        postText = postText + botHashtags;
+    } else if (!postText.includes('#Бот')) {
+        postText = postText + ' #Бот';
+    } else if (!postText.includes('#Константин')) {
+        postText = postText + ' #Константин';
+    }
+    
     const post = {
         id: Date.now(),
-        text: text,
+        text: postText,
         imageUrl: imageUrl,
         scheduledTime: scheduledTime,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        hashtags: ['#Бот', '#Константин']
     };
     
     scheduledPosts.push(post);
     localStorage.setItem('scheduledPosts', JSON.stringify(scheduledPosts));
     
     loadScheduledPosts();
-    showStatus('Пост запланирован', 'success', 'postStatus');
-    addLog(`Пост запланирован на ${new Date(scheduledTime).toLocaleString()}`, 'info');
+    showStatus('Пост запланирован (хэштеги будут добавлены)', 'success', 'postStatus');
+    addLog(`Пост запланирован на ${new Date(scheduledTime).toLocaleString()} с хэштегами`, 'info');
 }
 
 function loadScheduledPosts() {
@@ -285,6 +312,10 @@ function loadScheduledPosts() {
                     <i class="far fa-clock"></i> ${time}
                 </div>
                 <div class="scheduled-preview">${preview}</div>
+                <div style="display: flex; gap: 5px; margin-top: 5px;">
+                    <span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;">#Бот</span>
+                    <span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;">#Константин</span>
+                </div>
                 <div style="margin-top: 8px;">
                     <button class="btn-icon" onclick="deleteScheduled(${post.id})" title="Удалить">
                         <i class="fas fa-trash"></i>
@@ -368,13 +399,13 @@ async function testConnection() {
         
         if (!botData.ok) throw new Error('Бот не отвечает');
         
-        // Тест основного канала
+        // Тест основного канала с хэштегами
         const channelResponse = await fetch(`${API_URL}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 chat_id: MAIN_CHANNEL,
-                text: '🟢 <b>Тестовое сообщение</b>\n\nСоединение с ботом установлено успешно!\nКанал "Объективно" работает.',
+                text: '🟢 <b>Тестовое сообщение</b>\n\nСоединение с ботом установлено успешно!\nКанал "Объективно" работает.\n\n#Бот #Константин',
                 parse_mode: 'HTML'
             })
         });
@@ -383,7 +414,7 @@ async function testConnection() {
         
         if (channelData.ok) {
             showStatus('✅ Подключение работает! Проверьте канал', 'success', 'postStatus');
-            addLog('Тест подключения успешен', 'success');
+            addLog('Тест подключения успешен (хэштеги добавлены)', 'success');
         } else {
             throw new Error('Ошибка отправки в канал');
         }
@@ -446,16 +477,14 @@ async function updateChannelStats() {
         
         if (data.ok) {
             channelInfo = data.result;
-            const members = data.result.members_count || 42; // Если не пришло, ставим 42
+            const members = data.result.members_count || 42;
             document.getElementById('subscribersCount').textContent = members;
             
-            // Сохраняем историю подписчиков для расчёта роста
             const history = JSON.parse(localStorage.getItem('subscriberHistory') || '[]');
             history.push({
                 date: new Date().toISOString(),
                 count: members
             });
-            // Храним только последние 30 дней
             if (history.length > 30) history.shift();
             localStorage.setItem('subscriberHistory', JSON.stringify(history));
         }
@@ -465,7 +494,6 @@ async function updateChannelStats() {
 }
 
 async function updatePostViews() {
-    // Обновляем просмотры для всех сохранённых постов
     for (let i = 0; i < postsStats.length; i++) {
         const post = postsStats[i];
         if (post.messageIds && post.messageIds.length > 0) {
@@ -482,7 +510,6 @@ async function updatePostViews() {
                 
                 const data = await response.json();
                 if (data.ok) {
-                    // Реальные просмотры из Telegram
                     post.views = data.result.views || 0;
                 } else {
                     post.views = 0;
@@ -494,12 +521,11 @@ async function updatePostViews() {
         }
     }
     
-    // Сохраняем обновлённые данные
     localStorage.setItem('postsStats', JSON.stringify(postsStats));
 }
 
 function updateAverageReach() {
-    const posts = postsStats.slice(-10); // последние 10 постов
+    const posts = postsStats.slice(-10);
     if (posts.length === 0) {
         document.getElementById('avgReach').textContent = '0';
         return;
@@ -523,7 +549,6 @@ function updateEngagementRate() {
     const subscribers = parseInt(document.getElementById('subscribersCount').textContent) || 42;
     const avgReach = parseInt(document.getElementById('avgReach').textContent) || 0;
     
-    // ER = (средний охват / подписчики) * 100%
     if (subscribers > 0 && avgReach > 0) {
         const er = ((avgReach / subscribers) * 100).toFixed(1);
         document.getElementById('erRate').textContent = er + '%';
@@ -541,7 +566,6 @@ function updatePostsPerWeek() {
 }
 
 function updateGrowthRate() {
-    // Считаем рост подписчиков за последние 7 дней
     const history = JSON.parse(localStorage.getItem('subscriberHistory') || '[]');
     
     if (history.length < 2) {
@@ -594,25 +618,20 @@ function updateTopPosts() {
 function updateAudienceStats() {
     const subscribers = parseInt(document.getElementById('subscribersCount').textContent) || 42;
     
-    // Активные сегодня (реалистично для 42 подписчиков)
-    const activeToday = Math.round(subscribers * (Math.random() * 0.15 + 0.1)); // 10-25%
+    const activeToday = Math.round(subscribers * (Math.random() * 0.15 + 0.1));
     document.getElementById('activeToday').textContent = activeToday;
     
-    // Активные за неделю
-    const activeWeek = Math.round(subscribers * (Math.random() * 0.25 + 0.25)); // 25-50%
+    const activeWeek = Math.round(subscribers * (Math.random() * 0.25 + 0.25));
     document.getElementById('activeWeek').textContent = activeWeek;
     
-    // Для небольших каналов гендерная статистика обычно неизвестна
     document.getElementById('genderRatio').innerHTML = '<span style="color: var(--gray-400);">—</span>';
 }
 
 function updateBestTimeGrid() {
-    // Анализируем время публикации лучших постов
     const grid = document.getElementById('bestTimeGrid');
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     const hours = ['0-3', '4-7', '8-11', '12-15', '16-19', '20-23'];
     
-    // Создаём матрицу активности
     const activityMatrix = {};
     days.forEach(day => {
         activityMatrix[day] = {};
@@ -621,7 +640,6 @@ function updateBestTimeGrid() {
         });
     });
     
-    // Анализируем посты
     postsStats.forEach(post => {
         const postDate = new Date(post.date);
         const day = days[postDate.getDay() === 0 ? 6 : postDate.getDay() - 1];
@@ -633,7 +651,6 @@ function updateBestTimeGrid() {
         }
     });
     
-    // Нормализуем значения
     let maxViews = 0;
     days.forEach(day => {
         hours.forEach(hour => {
@@ -641,7 +658,6 @@ function updateBestTimeGrid() {
         });
     });
     
-    // Строим тепловую карту
     let html = '<div></div>';
     hours.forEach(hour => {
         html += `<div style="font-size:0.8rem; color:var(--gray-600); text-align:center;">${hour}</div>`;
@@ -666,7 +682,6 @@ function updateActivityChart() {
     const ctx = document.getElementById('activityChart')?.getContext('2d');
     if (!ctx) return;
     
-    // Группируем просмотры по дням
     const viewsByDay = {};
     for (let i = 6; i >= 0; i--) {
         const date = new Date();
@@ -728,6 +743,153 @@ function updateActivityChart() {
             }
         }
     });
+}
+
+// ===== ВСЕ ПОСТЫ =====
+function showAllPosts() {
+    const modal = document.getElementById('allPostsModal');
+    modal.classList.add('show');
+    renderAllPosts();
+}
+
+function closeAllPostsModal() {
+    document.getElementById('allPostsModal').classList.remove('show');
+}
+
+function renderAllPosts() {
+    const container = document.getElementById('allPostsList');
+    const sortBy = document.getElementById('sortPostsSelect')?.value || 'date_desc';
+    const searchTerm = document.getElementById('postSearchInput')?.value.toLowerCase() || '';
+    
+    let filteredPosts = [...postsStats];
+    
+    // Поиск
+    if (searchTerm) {
+        filteredPosts = filteredPosts.filter(post => 
+            post.text.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    // Сортировка
+    filteredPosts.sort((a, b) => {
+        switch(sortBy) {
+            case 'date_desc':
+                return new Date(b.date) - new Date(a.date);
+            case 'date_asc':
+                return new Date(a.date) - new Date(b.date);
+            case 'views_desc':
+                return (b.views || 0) - (a.views || 0);
+            case 'views_asc':
+                return (a.views || 0) - (b.views || 0);
+            default:
+                return new Date(b.date) - new Date(a.date);
+        }
+    });
+    
+    if (filteredPosts.length === 0) {
+        container.innerHTML = '<div class="loading">Посты не найдены</div>';
+        document.getElementById('totalPostsCount').textContent = '0';
+        return;
+    }
+    
+    let html = '';
+    filteredPosts.forEach(post => {
+        const date = new Date(post.date).toLocaleString();
+        const preview = post.text.substring(0, 100) + (post.text.length > 100 ? '...' : '');
+        const hasBotTag = post.text.includes('#Бот');
+        const hasKonstantinTag = post.text.includes('#Константин');
+        
+        html += `
+            <div class="post-stat-item" style="cursor: pointer;" onclick="viewPost(${post.id})">
+                <div style="display: flex; flex-direction: column; gap: 5px; width: 100%;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--gray-500); font-size: 0.85rem;">${date}</span>
+                        <span style="font-weight: 600; color: var(--primary);">${post.views || 0} 👁️</span>
+                    </div>
+                    <div class="post-preview" style="white-space: normal;">${preview}</div>
+                    <div style="display: flex; gap: 5px;">
+                        ${hasBotTag ? '<span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;">#Бот</span>' : ''}
+                        ${hasKonstantinTag ? '<span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;">#Константин</span>' : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    document.getElementById('totalPostsCount').textContent = filteredPosts.length;
+}
+
+function filterPosts() {
+    renderAllPosts();
+}
+
+function sortPosts() {
+    renderAllPosts();
+}
+
+function viewPost(postId) {
+    const post = postsStats.find(p => p.id === postId);
+    if (!post) return;
+    
+    currentViewingPostId = postId;
+    const modal = document.getElementById('viewPostModal');
+    const content = document.getElementById('viewPostContent');
+    
+    const date = new Date(post.date).toLocaleString();
+    const hasBotTag = post.text.includes('#Бот');
+    const hasKonstantinTag = post.text.includes('#Константин');
+    
+    content.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <div style="color: var(--gray-500); font-size: 0.9rem;">
+                <i class="far fa-calendar"></i> ${date}
+            </div>
+            <div style="background: var(--gray-50); padding: 15px; border-radius: var(--radius); white-space: pre-wrap;">
+                ${post.text}
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                ${hasBotTag ? '<span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;">#Бот</span>' : ''}
+                ${hasKonstantinTag ? '<span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;">#Константин</span>' : ''}
+            </div>
+            <div style="display: flex; gap: 20px; margin-top: 10px;">
+                <div><i class="fas fa-eye"></i> Просмотров: <strong>${post.views || 0}</strong></div>
+                <div><i class="fas fa-paper-plane"></i> ID: ${post.id}</div>
+            </div>
+        </div>
+    `;
+    
+    modal.classList.add('show');
+}
+
+function closeViewPostModal() {
+    document.getElementById('viewPostModal').classList.remove('show');
+    currentViewingPostId = null;
+}
+
+function deleteCurrentPost() {
+    if (!currentViewingPostId) return;
+    
+    if (confirm('Удалить этот пост из статистики?')) {
+        postsStats = postsStats.filter(p => p.id !== currentViewingPostId);
+        localStorage.setItem('postsStats', JSON.stringify(postsStats));
+        closeViewPostModal();
+        renderAllPosts();
+        refreshAllStats();
+        addLog('Пост удалён из статистики', 'warning');
+    }
+}
+
+function exportAllPosts() {
+    const dataStr = JSON.stringify(postsStats, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `all_posts_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    addLog('Все посты экспортированы', 'info');
 }
 
 // Переключение вкладок статистики
@@ -871,7 +1033,7 @@ function checkScheduledPosts() {
             const result = await sendToChannel(MAIN_CHANNEL, post.text, post.imageUrl);
             if (result.success) {
                 deleteScheduled(post.id);
-                addLog('Автоматическая публикация запланированного поста', 'success');
+                addLog('Автоматическая публикация запланированного поста с хэштегами', 'success');
             }
         }
     });
