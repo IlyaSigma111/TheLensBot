@@ -214,7 +214,7 @@
                 <div id="postStatus" class="status-message"></div>
             </div>
             
-            <!-- Карточка быстрых постов -->
+            <!-- Карточка быстрых постов (с кучей шаблонов) -->
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">
@@ -222,26 +222,106 @@
                     </div>
                     <div>
                         <h2 class="card-title">Быстрые посты</h2>
-                        <p class="card-subtitle">Шаблоны для канала</p>
+                        <p class="card-subtitle">20+ готовых шаблонов</p>
                     </div>
                 </div>
                 
-                <div class="quick-posts">
-                    <div class="quick-post" onclick="useTemplate('news')">
+                <div class="quick-posts-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 300px; overflow-y: auto; padding-right: 5px;">
+                    <div class="quick-post" onclick="useTemplate('news')" style="padding: 10px;">
                         <i class="fas fa-newspaper"></i>
-                        <span>Новость</span>
+                        <span style="font-size: 0.8rem;">Новость</span>
                     </div>
-                    <div class="quick-post" onclick="useTemplate('announcement')">
+                    <div class="quick-post" onclick="useTemplate('announcement')" style="padding: 10px;">
                         <i class="fas fa-megaphone"></i>
-                        <span>Анонс</span>
+                        <span style="font-size: 0.8rem;">Анонс</span>
                     </div>
-                    <div class="quick-post" onclick="useTemplate('poll')">
+                    <div class="quick-post" onclick="useTemplate('poll')" style="padding: 10px;">
                         <i class="fas fa-poll"></i>
-                        <span>Опрос</span>
+                        <span style="font-size: 0.8rem;">Опрос</span>
                     </div>
-                    <div class="quick-post" onclick="useTemplate('quote')">
+                    <div class="quick-post" onclick="useTemplate('quote')" style="padding: 10px;">
                         <i class="fas fa-quote-right"></i>
-                        <span>Цитата</span>
+                        <span style="font-size: 0.8rem;">Цитата</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('fact')" style="padding: 10px;">
+                        <i class="fas fa-brain"></i>
+                        <span style="font-size: 0.8rem;">Факт</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('joke')" style="padding: 10px;">
+                        <i class="fas fa-laugh"></i>
+                        <span style="font-size: 0.8rem;">Шутка</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('weather')" style="padding: 10px;">
+                        <i class="fas fa-cloud-sun"></i>
+                        <span style="font-size: 0.8rem;">Погода</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('sport')" style="padding: 10px;">
+                        <i class="fas fa-futbol"></i>
+                        <span style="font-size: 0.8rem;">Спорт</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('cinema')" style="padding: 10px;">
+                        <i class="fas fa-film"></i>
+                        <span style="font-size: 0.8rem;">Кино</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('music')" style="padding: 10px;">
+                        <i class="fas fa-music"></i>
+                        <span style="font-size: 0.8rem;">Музыка</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('tech')" style="padding: 10px;">
+                        <i class="fas fa-microchip"></i>
+                        <span style="font-size: 0.8rem;">Техно</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('science')" style="padding: 10px;">
+                        <i class="fas fa-flask"></i>
+                        <span style="font-size: 0.8rem;">Наука</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('history')" style="padding: 10px;">
+                        <i class="fas fa-landmark"></i>
+                        <span style="font-size: 0.8rem;">История</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('travel')" style="padding: 10px;">
+                        <i class="fas fa-plane"></i>
+                        <span style="font-size: 0.8rem;">Путешествия</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('food')" style="padding: 10px;">
+                        <i class="fas fa-utensils"></i>
+                        <span style="font-size: 0.8rem;">Еда</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('health')" style="padding: 10px;">
+                        <i class="fas fa-heartbeat"></i>
+                        <span style="font-size: 0.8rem;">Здоровье</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('fashion')" style="padding: 10px;">
+                        <i class="fas fa-tshirt"></i>
+                        <span style="font-size: 0.8rem;">Мода</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('education')" style="padding: 10px;">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span style="font-size: 0.8rem;">Образование</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('business')" style="padding: 10px;">
+                        <i class="fas fa-chart-pie"></i>
+                        <span style="font-size: 0.8rem;">Бизнес</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('motivation')" style="padding: 10px;">
+                        <i class="fas fa-fire"></i>
+                        <span style="font-size: 0.8rem;">Мотивация</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('riddle')" style="padding: 10px;">
+                        <i class="fas fa-question"></i>
+                        <span style="font-size: 0.8rem;">Загадка</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('advice')" style="padding: 10px;">
+                        <i class="fas fa-lightbulb"></i>
+                        <span style="font-size: 0.8rem;">Совет</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('greeting')" style="padding: 10px;">
+                        <i class="fas fa-hand-peace"></i>
+                        <span style="font-size: 0.8rem;">Поздравление</span>
+                    </div>
+                    <div class="quick-post" onclick="useTemplate('memory')" style="padding: 10px;">
+                        <i class="fas fa-clock"></i>
+                        <span style="font-size: 0.8rem;">Память</span>
                     </div>
                 </div>
                 
